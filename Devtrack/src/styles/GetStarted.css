@@ -1,0 +1,45 @@
+.get-started {
+  min-height: 460px;
+  padding: 90px 0 115px;
+}
+
+.get-started-content {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+}
+
+.get-started h2 {
+  font-size: clamp(38px, 4vw, 49px);
+  line-height: 1.05;
+}
+
+.get-started-content > p:not(.section-label) {
+  margin: 18px 0 36px;
+  color: #5f595b;
+  font-family: var(--serif);
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.button-wide {
+  min-width: 220px;
+}
+
+.get-started .ring-left {
+  left: -195px;
+  bottom: -105px;
+}
+
+.get-started .ring-right {
+  right: -190px;
+  bottom: -108px;
+}
+
+@media (max-width: 620px) {
+
+  .get-started {
+    min-height: 415px;
+    padding: 75px 0 110px;
+  }
+}

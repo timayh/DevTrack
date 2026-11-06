@@ -1,3 +1,6 @@
+import '../styles/LandingFooter.css';
+import { Link } from 'react-router-dom';
+
 const LandingFooter = () => {
   return (
     <footer className="landing-footer">
@@ -18,7 +21,7 @@ const LandingFooter = () => {
             <div>
               <h3>Company</h3>
               <a href="#top">About</a>
-              <a href="#login" id="login">Log In</a>
+              <Link to="/login">Log In</Link>
             </div>
           </div>
         </div>

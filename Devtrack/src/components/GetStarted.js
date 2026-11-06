@@ -1,4 +1,6 @@
 import { ArrowRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import '../styles/GetStarted.css';
 
 const GetStarted = () => {
   return (
@@ -10,7 +12,9 @@ const GetStarted = () => {
         <p className="section-label">Ready to get started?</p>
         <h2>Start tracking <em>smarter</em><br /> today.</h2>
         <p>Join DevTrack and turn your bugs into progress.</p>
-        <a className="button button-wide" href="#top">Get Started <ArrowRight size={18} /></a>
+        <Link className="button button-wide" to="/signup">
+          Get Started <ArrowRight size={18} />
+        </Link>
       </div>
     </section>
   );

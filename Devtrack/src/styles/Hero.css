@@ -1,0 +1,312 @@
+.hero {
+  min-height: 755px;
+  position: relative;
+  padding: 100px 0 70px;
+}
+
+.hero-blob {
+  position: absolute;
+  border-radius: 50%;
+  background: var(--pink);
+  opacity: 0.88;
+}
+
+.hero-blob-one {
+  width: 420px;
+  height: 420px;
+  left: -160px;
+  top: 56px;
+}
+
+.hero-blob-two {
+  width: 365px;
+  height: 365px;
+  right: -125px;
+  top: 28px;
+}
+
+.hero-blob-three {
+  width: 350px;
+  height: 350px;
+  right: 12%;
+  bottom: -120px;
+}
+
+.hero-layout {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: 1.02fr 0.98fr;
+  align-items: center;
+  gap: 55px;
+}
+
+.hero h1 {
+  margin: 0;
+  max-width: 600px;
+  font-family: var(--sans);
+  font-size: clamp(43px, 4.25vw, 64px);
+  line-height: 1.05;
+  letter-spacing: -2.5px;
+}
+
+.hero h1 em {
+  font-family: var(--sans);
+  font-style: normal;
+}
+
+.hero-description {
+  max-width: 600px;
+  margin: 34px 0 38px;
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1.35;
+}
+
+.hero-actions {
+  display: flex;
+  gap: 35px;
+}
+
+.benefit-list {
+  margin: 54px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 17px;
+  list-style: none;
+  color: #6a6466;
+  font-size: 17px;
+}
+
+.benefit-list li {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.benefit-list li span {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--pink-soft);
+  color: #aa3b54;
+  box-shadow: 0 3px 4px rgba(69, 42, 48, 0.17);
+}
+
+.hero-visual {
+  width: min(100%, 525px);
+  height: 440px;
+  justify-self: end;
+  position: relative;
+  border-radius: 52% 48% 0 0;
+  background: rgba(255, 252, 245, 0.78);
+}
+
+.orbit {
+  position: absolute;
+  left: 50%;
+  top: 44%;
+  border: 1px solid rgba(122, 16, 40, 0.16);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.orbit-outer {
+  width: 360px;
+  height: 360px;
+}
+
+.orbit-inner {
+  width: 270px;
+  height: 270px;
+}
+
+.spark {
+  position: absolute;
+  color: var(--burgundy);
+  font-size: 34px;
+}
+
+.spark-top {
+  top: 29px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.visual-card {
+  width: 155px;
+  height: 155px;
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 13px;
+  border-radius: 13px;
+  box-shadow: 0 10px 20px rgba(76, 52, 40, 0.16);
+  text-transform: uppercase;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.13em;
+}
+
+.visual-card-report {
+  top: 80px;
+  left: 21px;
+  color: #223f2d;
+  background: linear-gradient(145deg, #dcebbf, #bbd695);
+  transform: rotate(-14deg);
+}
+
+.visual-card-report > * {
+  transform: rotate(14deg);
+}
+
+.visual-card-track {
+  top: 82px;
+  right: 1px;
+  color: #6b4505;
+  background: linear-gradient(145deg, #ffd064, #f5b73e);
+  transform: rotate(14deg);
+}
+
+.visual-card-track > * {
+  transform: rotate(-14deg);
+}
+
+.visual-card-fix {
+  width: 170px;
+  height: 170px;
+  left: 50%;
+  top: 190px;
+  color: #fff;
+  background: linear-gradient(145deg, #971a36, #7a1028);
+  transform: translateX(-50%) rotate(-4deg);
+}
+
+.visual-card-fix > * {
+  transform: rotate(4deg);
+}
+
+.fix-icon {
+  position: relative;
+  width: 58px;
+  height: 58px;
+}
+
+.fix-icon svg:last-child {
+  position: absolute;
+  left: 14px;
+  top: 13px;
+  fill: var(--burgundy);
+}
+
+.visual-caption {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 25px;
+  margin: 0;
+  text-align: center;
+  font-family: var(--serif);
+  font-size: 16px;
+  font-style: italic;
+  font-weight: 600;
+}
+
+@media (max-width: 980px) {
+
+  .hero {
+    padding-top: 72px;
+  }
+
+  .hero-layout {
+    grid-template-columns: 1fr;
+    gap: 60px;
+  }
+
+  .hero-copy {
+    max-width: 650px;
+  }
+
+  .hero-visual {
+    justify-self: center;
+  }
+}
+
+@media (max-width: 620px) {
+
+  .hero {
+    min-height: auto;
+    padding: 65px 0 55px;
+  }
+
+  .hero-blob-one {
+    width: 300px;
+    height: 300px;
+    left: -195px;
+  }
+
+  .hero-blob-two {
+    width: 240px;
+    height: 240px;
+    right: -160px;
+  }
+
+  .hero-blob-three {
+    display: none;
+  }
+
+  .hero h1 {
+    font-size: 42px;
+    letter-spacing: -1.8px;
+  }
+
+  .hero-description {
+    margin: 26px 0 30px;
+    font-size: 16px;
+  }
+
+  .hero-actions {
+    gap: 12px;
+  }
+
+  .hero-actions .button {
+    min-width: 0;
+    flex: 1;
+    padding: 0 15px;
+  }
+
+  .benefit-list {
+    margin-top: 42px;
+    font-size: 14px;
+  }
+
+  .benefit-list li {
+    gap: 12px;
+  }
+
+  .benefit-list li span {
+    width: 32px;
+    height: 32px;
+  }
+
+  .hero-visual {
+    height: 355px;
+    transform: scale(0.8);
+    transform-origin: top center;
+    margin-bottom: -60px;
+  }
+
+  .visual-card-report {
+    left: 0;
+  }
+
+  .visual-card-track {
+    right: 0;
+  }
+}

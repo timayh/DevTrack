@@ -6,6 +6,8 @@ import {
   FileWarning,
   ShieldCheck,
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import '../styles/Hero.css';
 
 const Hero = () => {
   const benefits = [
@@ -33,7 +35,7 @@ const Hero = () => {
           </p>
 
           <div className="hero-actions">
-            <a className="button" href="#signup">Sign Up <ArrowRight size={18} /></a>
+            <Link className="button" to="/signup">Sign Up <ArrowRight size={18} /></Link>
             <a className="button button-secondary" href="#how-it-works">Learn More</a>
           </div>
 

@@ -1,11 +1,17 @@
-import './App.css';
+import './styles/global.css';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import GetStarted from './components/GetStarted';
 import Hero from './components/Hero';
 import HowItWorks from './components/HowItWorks';
 import LandingFooter from './components/LandingFooter';
 import LandingNavbar from './components/LandingNavbar';
+import ScrollToTop from './components/ScrollToTop';
+import Dashboard from './pages/Dashboard';
+import Login from './pages/Login';
+import SignUp from './pages/SignUp';
+import { readLocalSession } from './utils/authStorage';
 
-const App = () => {
+const LandingPage = () => {
   return (
     <div className="landing-page">
       <LandingNavbar />
@@ -16,6 +22,32 @@ const App = () => {
       </main>
       <LandingFooter />
     </div>
+  );
+};
+
+const ProtectedRoute = ({ children }) => {
+  return readLocalSession() ? children : <Navigate to="/login" replace />;
+};
+
+const App = () => {
+  return (
+    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <ScrollToTop />
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/signup" element={<SignUp />} />
+        <Route path="/login" element={<Login />} />
+        <Route
+          path="/dashboard"
+          element={(
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          )}
+        />
+        <Route path="*" element={<LandingPage />} />
+      </Routes>
+    </BrowserRouter>
   );
 };
 

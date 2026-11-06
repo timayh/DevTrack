@@ -1,5 +1,7 @@
 import { ArrowRight, Bug, Menu, X } from 'lucide-react';
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import '../styles/LandingNavbar.css';
 
 const LandingNavbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -29,10 +31,10 @@ const LandingNavbar = () => {
         <div className={`nav-links ${isOpen ? 'is-open' : ''}`}>
           <a href="#how-it-works" onClick={closeMenu}>How It Works</a>
           <a href="#top" onClick={closeMenu}>About</a>
-          <a href="#login" onClick={closeMenu}>Log In</a>
-          <a className="button button-small" href="#signup" onClick={closeMenu}>
+          <Link to="/login" onClick={closeMenu}>Log In</Link>
+          <Link className="button button-small" to="/signup" onClick={closeMenu}>
             Sign Up <ArrowRight size={17} />
-          </a>
+          </Link>
         </div>
       </nav>
     </header>

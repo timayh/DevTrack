@@ -1,4 +1,5 @@
 import { Bug, ClipboardList, FileWarning, Users } from 'lucide-react';
+import '../styles/HowItWorks.css';
 
 const HowItWorks = () => {
   const steps = [
