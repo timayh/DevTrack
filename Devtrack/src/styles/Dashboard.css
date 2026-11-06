@@ -540,22 +540,60 @@
 }
 
 .dashboard-notice {
-  margin: 12px 28px -2px;
-  padding: 9px 13px;
-  float: right;
+  position: fixed;
+  z-index: 500;
+  top: 20px;
+  left: 50%;
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  min-height: 48px;
+  padding: 10px 12px 10px 16px;
   display: flex;
   align-items: center;
   gap: 14px;
   border: 1px solid #e7bcc6;
-  border-radius: 9px;
-  background: #f8dfe4;
+  border-radius: 12px;
+  background: #fff9f8;
   color: var(--dash-burgundy);
-  cursor: pointer;
-  font-size: 12px;
+  box-shadow: 0 16px 36px rgba(59, 24, 33, 0.25);
+  font-size: 13px;
+  font-weight: 600;
+  transform: translateX(-50%);
+  animation: dashboard-notice-in 180ms ease-out;
 }
 
-.dashboard-notice span {
+.dashboard-notice > button {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: grid;
+  flex: 0 0 28px;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: #f6e2e6;
+  color: var(--dash-burgundy);
+  cursor: pointer;
   font-size: 18px;
+  line-height: 1;
+}
+
+.dashboard-notice > button:hover,
+.dashboard-notice > button:focus-visible {
+  outline: 2px solid rgba(134, 16, 45, 0.22);
+  background: #f0ccd4;
+}
+
+@keyframes dashboard-notice-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -12px) scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
 }
 
 .dashboard-body {
@@ -749,6 +787,7 @@
 .panel-heading button,
 .rail-heading button {
   display: inline-flex;
+  flex: 0 0 auto;
   align-items: center;
   gap: 3px;
   border: 0;
@@ -756,6 +795,7 @@
   color: var(--dash-burgundy);
   cursor: pointer;
   font-size: 12px;
+  white-space: nowrap;
 }
 
 .panel-heading button:hover,
@@ -935,10 +975,11 @@
   stroke-width: 1.6;
 }
 
-.project-icon-web { background: var(--dash-burgundy); color: #fff; }
-.project-icon-mobile { background: #ffdda0; color: #9d5c05; }
-.project-icon-api { background: #dcefe3; color: #27744e; }
-.project-icon-site { background: #e3e7e8; color: #4d5f6a; }
+.project-icon-software-development { background: #a90930; color: #fff; }
+.project-icon-mobile-application { background: #fff0d1; color: #b76800; }
+.project-icon-api-service { background: #dff3e8; color: #16724a; }
+.project-icon-website { background: #e2edf8; color: #285d8d; }
+.project-icon-other { background: #ececef; color: #565c68; }
 
 .project-progress i {
   width: 145px;
@@ -1480,5 +1521,9 @@
   .dashboard-page *::before,
   .dashboard-page *::after {
     transition-duration: 0.01ms !important;
+  }
+
+  .dashboard-notice {
+    animation: none;
   }
 }

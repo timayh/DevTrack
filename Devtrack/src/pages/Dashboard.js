@@ -20,18 +20,24 @@ import {
   Plus,
   RefreshCcw,
   Search,
+  ServerCog,
   Settings,
+  Shapes,
   Smartphone,
   Users,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import CreateProjectModal from '../components/CreateProjectModal';
 import '../styles/Dashboard.css';
 import { clearLocalSession, readLocalSession } from '../utils/authStorage';
+import {
+  markAllUserNotificationsRead,
+  readUserNotifications,
+} from '../utils/notificationStorage';
+import { readStoredProjects } from '../utils/projectStorage';
 
 const recentBugs = [];
-const activeProjects = [];
-const deadlines = [];
 const initialTasks = [];
 
 const navigationItems = [
@@ -50,15 +56,58 @@ const getInitials = (name = 'DevTrack User') => name
   .map((part) => part[0].toUpperCase())
   .join('');
 
+const formatProjectDate = (date) => {
+  if (!date) return 'No due date';
+
+  return new Date(`${date}T00:00:00`).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+};
+
+const projectIconTypes = [
+  'software-development',
+  'mobile-application',
+  'api-service',
+  'website',
+  'other',
+];
+
+const getProjectIconType = (type) => (
+  projectIconTypes.includes(type) ? type : 'other'
+);
+
+const getDeadlineDetails = (endDate) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const deadline = new Date(`${endDate}T00:00:00`);
+  const daysLeft = Math.ceil((deadline.getTime() - today.getTime()) / 86400000);
+
+  if (daysLeft < 0) {
+    const overdueDays = Math.abs(daysLeft);
+    return {
+      days: `${overdueDays} day${overdueDays === 1 ? '' : 's'} overdue`,
+      tone: 'urgent',
+    };
+  }
+
+  return {
+    days: daysLeft === 0 ? 'Today' : `${daysLeft} day${daysLeft === 1 ? '' : 's'}`,
+    tone: daysLeft <= 5 ? 'urgent' : daysLeft <= 10 ? 'warning' : 'muted',
+  };
+};
+
 const ProjectIcon = ({ type }) => {
   const icons = {
-    web: <Folder />,
-    mobile: <Smartphone />,
-    api: <Code2 />,
-    site: <Globe2 />,
+    'software-development': <Code2 />,
+    'mobile-application': <Smartphone />,
+    'api-service': <ServerCog />,
+    website: <Globe2 />,
+    other: <Shapes />,
   };
 
-  return <span className={`project-icon project-icon-${type}`}>{icons[type]}</span>;
+  return <span className={`project-icon project-icon-${type}`}>{icons[type] || icons.other}</span>;
 };
 
 const Dashboard = () => {
@@ -67,12 +116,45 @@ const Dashboard = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [profileOpen, setProfileOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [notifications, setNotifications] = useState([]);
+  const [notifications, setNotifications] = useState(() => readUserNotifications(session?.id));
   const [completedTasks, setCompletedTasks] = useState([]);
   const [notice, setNotice] = useState('');
+  const [projectModalOpen, setProjectModalOpen] = useState(false);
+  const [projects, setProjects] = useState(() => readStoredProjects().filter((project) => (
+    project.ownerId === session?.id || project.teamMemberIds?.includes(session?.id)
+  )));
   const notificationMenuRef = useRef(null);
 
   const unreadNotificationCount = notifications.filter((notification) => !notification.read).length;
+  const activeProjects = useMemo(() => projects
+    .filter((project) => project.status === 'active')
+    .map((project) => ({
+      ...project,
+      progress: project.progress ?? 0,
+      bugs: project.bugCount ?? 0,
+      due: formatProjectDate(project.endDate),
+      icon: getProjectIconType(project.type),
+    })), [projects]);
+  const deadlines = useMemo(() => projects
+    .filter((project) => project.endDate)
+    .sort((first, second) => first.endDate.localeCompare(second.endDate))
+    .slice(0, 3)
+    .map((project) => ({
+      id: project.id,
+      title: project.name,
+      date: formatProjectDate(project.endDate),
+      ...getDeadlineDetails(project.endDate),
+    })), [projects]);
+  const teamCount = useMemo(() => {
+    const memberIds = new Set();
+
+    projects.forEach((project) => {
+      if (project.ownerId) memberIds.add(project.ownerId);
+      project.teamMemberIds?.forEach((memberId) => memberIds.add(memberId));
+    });
+
+    return memberIds.size;
+  }, [projects]);
 
   useEffect(() => {
     if (!notificationsOpen) return undefined;
@@ -95,14 +177,21 @@ const Dashboard = () => {
     };
   }, [notificationsOpen]);
 
+  useEffect(() => {
+    if (!notice) return undefined;
+
+    const dismissTimer = window.setTimeout(() => setNotice(''), 4000);
+    return () => window.clearTimeout(dismissTimer);
+  }, [notice]);
+
   const normalizedSearch = searchTerm.trim().toLowerCase();
   const filteredBugs = useMemo(() => recentBugs.filter((bug) => (
     !normalizedSearch
     || `${bug.id} ${bug.title} ${bug.assignee} ${bug.status}`.toLowerCase().includes(normalizedSearch)
   )), [normalizedSearch]);
   const filteredProjects = useMemo(() => activeProjects.filter((project) => (
-    !normalizedSearch || project.name.toLowerCase().includes(normalizedSearch)
-  )), [normalizedSearch]);
+    !normalizedSearch || `${project.name} ${project.key}`.toLowerCase().includes(normalizedSearch)
+  )), [activeProjects, normalizedSearch]);
 
   const showComingSoon = (feature) => {
     setNotice(`${feature} will be connected in the next development phase.`);
@@ -122,7 +211,7 @@ const Dashboard = () => {
   };
 
   const markAllNotificationsRead = () => {
-    setNotifications((current) => current.map((notification) => ({ ...notification, read: true })));
+    setNotifications(markAllUserNotificationsRead(session.id));
   };
 
   return (
@@ -217,7 +306,7 @@ const Dashboard = () => {
                     type="button"
                     onClick={() => {
                       setNotificationsOpen(false);
-                      showComingSoon('All notifications');
+                      navigate('/notifications');
                     }}
                   >
                     View all notifications <ArrowRight />
@@ -250,9 +339,10 @@ const Dashboard = () => {
         </header>
 
         {notice && (
-          <button className="dashboard-notice" type="button" onClick={() => setNotice('')}>
-            {notice}<span aria-hidden="true">×</span>
-          </button>
+          <div className="dashboard-notice" role="status" aria-live="polite" aria-atomic="true">
+            <span>{notice}</span>
+            <button type="button" aria-label="Dismiss notification" onClick={() => setNotice('')}>×</button>
+          </div>
         )}
 
         <div className="dashboard-body">
@@ -267,7 +357,13 @@ const Dashboard = () => {
                 <button className="primary-dashboard-action" type="button" onClick={() => showComingSoon('Create Bug')}>
                   <Plus /> Create Bug
                 </button>
-                <button type="button" onClick={() => showComingSoon('New Project')}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNotice('');
+                    setProjectModalOpen(true);
+                  }}
+                >
                   <Folder /> New Project
                 </button>
               </div>
@@ -288,7 +384,7 @@ const Dashboard = () => {
               </article>
               <article>
                 <span className="metric-icon metric-icon-gray"><Users /></span>
-                <div><p>Team</p><strong>0</strong></div>
+                <div><p>Team</p><strong>{teamCount}</strong></div>
               </article>
             </section>
 
@@ -329,7 +425,7 @@ const Dashboard = () => {
               <div className="project-list">
                 <div className="project-row project-row-head"><span>Project</span><span>Progress</span><span>Bugs</span><span>Due Date</span></div>
                 {filteredProjects.map((project) => (
-                  <div className="project-row" key={project.name}>
+                  <div className="project-row" key={project.id}>
                     <span className="project-name"><ProjectIcon type={project.icon} />{project.name}</span>
                     <span className="project-progress"><i><b style={{ width: `${project.progress}%` }} /></i>{project.progress}%</span>
                     <span>{project.bugs}</span>
@@ -355,7 +451,7 @@ const Dashboard = () => {
               <div className="rail-heading"><h2>Upcoming Deadlines</h2><button type="button" onClick={() => showComingSoon('All deadlines')}>View all <ArrowRight /></button></div>
               <div className="deadline-list">
                 {deadlines.length > 0 ? deadlines.map((deadline) => (
-                  <article key={deadline.title}>
+                  <article key={deadline.id}>
                     <span className="deadline-icon"><CalendarDays /></span>
                     <div><strong>{deadline.title}</strong><span>{deadline.date}</span></div>
                     <i className={`deadline-days deadline-${deadline.tone}`}>{deadline.days}</i>
@@ -388,6 +484,19 @@ const Dashboard = () => {
           </aside>
         </div>
       </div>
+
+      {projectModalOpen && (
+        <CreateProjectModal
+          currentUser={session}
+          existingProjects={projects}
+          onClose={() => setProjectModalOpen(false)}
+          onProjectCreated={(project) => {
+            setProjects((current) => [...current, project]);
+            setProjectModalOpen(false);
+            setNotice(`${project.name} was created successfully.`);
+          }}
+        />
+      )}
     </div>
   );
 };

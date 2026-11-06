@@ -1,6 +1,8 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import App from './App';
 import { hashPassword, SESSION_STORAGE_KEY, USERS_STORAGE_KEY } from './utils/authStorage';
+import { NOTIFICATIONS_STORAGE_KEY } from './utils/notificationStorage';
+import { PROJECTS_STORAGE_KEY } from './utils/projectStorage';
 
 beforeEach(() => {
   localStorage.clear();
@@ -143,4 +145,97 @@ test('renders the dashboard for an authenticated local session', () => {
   expect(screen.getByRole('heading', { name: /^notifications$/i })).toBeInTheDocument();
   expect(screen.getByText(/no notifications yet/i)).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /mark all as read/i })).toBeDisabled();
+});
+
+test('creates and stores a project from the dashboard modal', async () => {
+  localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({
+    id: 'test-user',
+    fullName: 'Jane Doe',
+    email: 'jane@example.com',
+    usage: 'create-project',
+  }));
+  window.history.pushState({}, '', '/dashboard');
+  render(<App />);
+
+  fireEvent.click(screen.getByRole('button', { name: /new project/i }));
+  expect(screen.getByRole('dialog', { name: /create project/i })).toBeInTheDocument();
+  expect(screen.queryByLabelText(/priority/i)).not.toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: /project type: software development/i }));
+  const projectTypeOptions = screen.getByRole('listbox', { name: /project type/i })
+    .querySelectorAll('[role="option"]');
+  expect(projectTypeOptions).toHaveLength(5);
+  projectTypeOptions.forEach((option) => expect(option.querySelector('svg')).toBeInTheDocument());
+  fireEvent.click(screen.getByRole('option', { name: /api service/i }));
+
+  fireEvent.change(screen.getByLabelText(/project name/i), { target: { value: 'Capstone Tracker' } });
+  fireEvent.change(screen.getByLabelText(/project key/i), { target: { value: 'cap' } });
+  fireEvent.change(screen.getByLabelText(/description/i), {
+    target: { value: 'University capstone project tracker' },
+  });
+  fireEvent.change(screen.getByLabelText(/end date/i), { target: { value: '2027-05-01' } });
+  fireEvent.click(screen.getByRole('button', { name: /^create project$/i }));
+
+  await waitFor(() => {
+    expect(screen.queryByRole('dialog', { name: /create project/i })).not.toBeInTheDocument();
+  });
+  expect(screen.getByRole('status')).toHaveTextContent(/capstone tracker was created successfully/i);
+  const createdProjectName = screen.getAllByText('Capstone Tracker')
+    .find((element) => element.classList.contains('project-name'));
+  expect(createdProjectName).toBeInTheDocument();
+  expect(createdProjectName.querySelector('.lucide-server-cog')).toBeInTheDocument();
+
+  const [project] = JSON.parse(localStorage.getItem(PROJECTS_STORAGE_KEY));
+  expect(project.key).toBe('CAP');
+  expect(project.ownerId).toBe('test-user');
+  expect(project.type).toBe('api-service');
+  expect(project.priority).toBeUndefined();
+  expect(project.progress).toBe(0);
+});
+
+test('opens the full notifications page from the dashboard dropdown', async () => {
+  localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({
+    id: 'test-user',
+    fullName: 'Jane Doe',
+    email: 'jane@example.com',
+    usage: 'create-project',
+  }));
+  window.history.pushState({}, '', '/dashboard');
+  render(<App />);
+
+  fireEvent.click(screen.getByRole('button', { name: /view notifications/i }));
+  fireEvent.click(screen.getByRole('button', { name: /view all notifications/i }));
+
+  await waitFor(() => {
+    expect(screen.getByRole('heading', { name: /notification center/i })).toBeInTheDocument();
+  });
+  expect(screen.getByText(/no notifications yet/i)).toBeInTheDocument();
+  expect(screen.getByRole('navigation', { name: /application navigation/i })).toBeInTheDocument();
+});
+
+test('shows stored notifications and marks them all as read', () => {
+  localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({
+    id: 'test-user',
+    fullName: 'Jane Doe',
+    email: 'jane@example.com',
+    usage: 'create-project',
+  }));
+  localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify([{
+    id: 'notification-1',
+    userId: 'test-user',
+    category: 'project',
+    message: 'A project was updated',
+    detail: 'Capstone Tracker has new activity.',
+    read: false,
+    createdAt: '2026-11-06T10:00:00.000Z',
+  }]));
+  window.history.pushState({}, '', '/notifications');
+  render(<App />);
+
+  expect(screen.getByText('A project was updated')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: /mark all as read/i }));
+
+  const [storedNotification] = JSON.parse(localStorage.getItem(NOTIFICATIONS_STORAGE_KEY));
+  expect(storedNotification.read).toBe(true);
+  expect(screen.getByText('A project was updated').closest('article')).not.toHaveClass('is-unread');
 });

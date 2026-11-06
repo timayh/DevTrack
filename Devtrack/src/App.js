@@ -8,6 +8,7 @@ import LandingNavbar from './components/LandingNavbar';
 import ScrollToTop from './components/ScrollToTop';
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
+import Notifications from './pages/Notifications';
 import SignUp from './pages/SignUp';
 import { readLocalSession } from './utils/authStorage';
 
@@ -42,6 +43,14 @@ const App = () => {
           element={(
             <ProtectedRoute>
               <Dashboard />
+            </ProtectedRoute>
+          )}
+        />
+        <Route
+          path="/notifications"
+          element={(
+            <ProtectedRoute>
+              <Notifications />
             </ProtectedRoute>
           )}
         />
