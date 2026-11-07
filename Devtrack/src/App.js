@@ -8,7 +8,12 @@ import LandingNavbar from './components/LandingNavbar';
 import ScrollToTop from './components/ScrollToTop';
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
+import MyTasks from './pages/MyTasks';
 import Notifications from './pages/Notifications';
+import ProjectDetails from './pages/ProjectDetails';
+import Projects from './pages/Projects';
+import Reports from './pages/Reports';
+import Settings from './pages/Settings';
 import SignUp from './pages/SignUp';
 import { readLocalSession } from './utils/authStorage';
 
@@ -47,10 +52,50 @@ const App = () => {
           )}
         />
         <Route
+          path="/tasks"
+          element={(
+            <ProtectedRoute>
+              <MyTasks />
+            </ProtectedRoute>
+          )}
+        />
+        <Route
+          path="/reports"
+          element={(
+            <ProtectedRoute>
+              <Reports />
+            </ProtectedRoute>
+          )}
+        />
+        <Route
           path="/notifications"
           element={(
             <ProtectedRoute>
               <Notifications />
+            </ProtectedRoute>
+          )}
+        />
+        <Route
+          path="/settings"
+          element={(
+            <ProtectedRoute>
+              <Settings />
+            </ProtectedRoute>
+          )}
+        />
+        <Route
+          path="/projects"
+          element={(
+            <ProtectedRoute>
+              <Projects />
+            </ProtectedRoute>
+          )}
+        />
+        <Route
+          path="/projects/:projectId"
+          element={(
+            <ProtectedRoute>
+              <ProjectDetails />
             </ProtectedRoute>
           )}
         />

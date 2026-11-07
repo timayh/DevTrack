@@ -46,8 +46,10 @@ export const saveLocalSession = (user) => {
   const session = {
     id: user.id,
     fullName: user.fullName,
+    nickname: user.nickname || '',
     email: user.email,
     usage: user.usage,
+    profileImage: user.profileImage || '',
     loggedInAt: new Date().toISOString(),
   };
 
@@ -66,4 +68,58 @@ export const readLocalSession = () => {
 
 export const clearLocalSession = () => {
   localStorage.removeItem(SESSION_STORAGE_KEY);
+};
+
+export const updateLocalProfile = (userId, { nickname, profileImage }) => {
+  const users = readStoredUsers();
+  const userIndex = users.findIndex((user) => user.id === userId);
+
+  if (userIndex === -1) return null;
+
+  const updatedUser = {
+    ...users[userIndex],
+    nickname: nickname.trim(),
+    profileImage: profileImage || '',
+    updatedAt: new Date().toISOString(),
+  };
+
+  users[userIndex] = updatedUser;
+  saveStoredUsers(users);
+
+  const currentSession = readLocalSession();
+  let session = currentSession;
+
+  if (currentSession?.id === userId) {
+    session = {
+      ...currentSession,
+      fullName: updatedUser.fullName,
+      nickname: updatedUser.nickname,
+      profileImage: updatedUser.profileImage,
+    };
+    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+  }
+
+  return { user: updatedUser, session };
+};
+
+export const changeLocalPassword = async (userId, currentPassword, newPassword) => {
+  const users = readStoredUsers();
+  const userIndex = users.findIndex((user) => user.id === userId);
+
+  if (userIndex === -1) return { ok: false, reason: 'not-found' };
+
+  const currentPasswordHash = await hashPassword(currentPassword);
+
+  if (users[userIndex].passwordHash !== currentPasswordHash) {
+    return { ok: false, reason: 'incorrect-password' };
+  }
+
+  users[userIndex] = {
+    ...users[userIndex],
+    passwordHash: await hashPassword(newPassword),
+    updatedAt: new Date().toISOString(),
+  };
+  saveStoredUsers(users);
+
+  return { ok: true };
 };

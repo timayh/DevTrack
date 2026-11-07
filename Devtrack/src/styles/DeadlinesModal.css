@@ -1,0 +1,365 @@
+.deadlines-modal-backdrop {
+  position: fixed;
+  z-index: 220;
+  inset: 0;
+  padding: 16px;
+  display: grid;
+  place-items: center;
+  overflow-y: auto;
+  background: rgba(64, 33, 40, 0.34);
+  backdrop-filter: blur(1px);
+}
+
+.deadlines-modal {
+  width: min(690px, calc(100vw - 32px));
+  max-height: min(760px, calc(100vh - 32px));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 2px solid #a90b30;
+  border-radius: 20px;
+  background: #fffdf9;
+  box-shadow: 0 22px 55px rgba(51, 24, 31, 0.25);
+  animation: deadlines-modal-in 180ms ease-out;
+}
+
+.deadlines-modal-header {
+  min-height: 98px;
+  padding: 18px 22px;
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr) 40px;
+  align-items: center;
+  gap: 16px;
+  border-bottom: 1px solid #eadadd;
+}
+
+.deadlines-modal-icon {
+  width: 58px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: #ffe7e9;
+  color: #b80931;
+}
+
+.deadlines-modal-icon svg {
+  width: 31px;
+  height: 31px;
+  stroke-width: 1.7;
+}
+
+.deadlines-modal-header h2 {
+  margin: 0;
+  color: #172036;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 30px;
+  line-height: 1.05;
+}
+
+.deadlines-modal-header p {
+  margin: 5px 0 0;
+  color: #6f829d;
+  font-size: 13px;
+}
+
+.deadlines-modal-header > button {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #26354b;
+  cursor: pointer;
+}
+
+.deadlines-modal-header > button:hover,
+.deadlines-modal-header > button:focus-visible {
+  outline: 0;
+  background: #f7e3e7;
+}
+
+.deadlines-modal-header > button svg {
+  width: 26px;
+  height: 26px;
+}
+
+.deadlines-modal-toolbar {
+  min-height: 68px;
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  border-bottom: 1px solid #eadadd;
+  background: #fffaf9;
+}
+
+.deadlines-modal-toolbar > div:first-child {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.deadlines-modal-toolbar > div:first-child strong {
+  color: var(--dash-burgundy);
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 23px;
+}
+
+.deadlines-modal-toolbar > div:first-child span {
+  color: #83797c;
+  font-size: 10px;
+}
+
+.deadline-filters {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.deadline-filters button {
+  min-height: 33px;
+  padding: 0 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid transparent;
+  border-radius: 18px;
+  background: transparent;
+  color: #625a5c;
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.deadline-filters button > span {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 10px;
+  background: #eee4e6;
+  color: #776d70;
+  font-size: 8px;
+}
+
+.deadline-filters button:hover,
+.deadline-filters button:focus-visible,
+.deadline-filters button.is-active {
+  outline: 0;
+  border-color: #dbaeba;
+  background: #f5d8de;
+  color: var(--dash-burgundy);
+}
+
+.deadline-filters button.is-active > span {
+  background: var(--dash-burgundy);
+  color: #fff;
+}
+
+.deadlines-modal-list {
+  overflow-y: auto;
+}
+
+.deadlines-modal-list > button {
+  width: 100%;
+  min-height: 91px;
+  padding: 15px 20px;
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  border: 0;
+  border-bottom: 1px solid #eee1e4;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  transition: background 160ms ease, box-shadow 160ms ease;
+}
+
+.deadlines-modal-list > button:last-child {
+  border-bottom: 0;
+}
+
+.deadlines-modal-list > button:hover,
+.deadlines-modal-list > button:focus-visible {
+  outline: 0;
+  background: #fff7f8;
+  box-shadow: inset 4px 0 var(--dash-burgundy);
+}
+
+.deadline-modal-item-icon {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+}
+
+.deadline-modal-item-icon svg {
+  width: 22px;
+  height: 22px;
+  stroke-width: 1.7;
+}
+
+.deadline-modal-icon-project {
+  background: #f4e2e6;
+  color: var(--dash-burgundy);
+}
+
+.deadline-modal-icon-bug {
+  background: #fff0d5;
+  color: #b96a04;
+}
+
+.deadline-modal-copy {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.deadline-modal-copy small {
+  color: var(--dash-burgundy);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.deadline-modal-copy strong,
+.deadline-modal-copy i {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.deadline-modal-copy strong {
+  color: #302a2e;
+  font-size: 13px;
+}
+
+.deadline-modal-copy i {
+  color: #8d8386;
+  font-size: 10px;
+  font-style: normal;
+}
+
+.deadline-modal-date {
+  display: grid;
+  justify-items: end;
+  gap: 7px;
+}
+
+.deadline-modal-date > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #6f6669;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.deadline-modal-date > span svg {
+  width: 13px;
+  height: 13px;
+  color: var(--dash-burgundy);
+}
+
+.deadline-modal-date .deadline-days {
+  font-size: 9px;
+}
+
+.deadlines-modal-empty {
+  min-height: 310px;
+  padding: 40px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #8d8386;
+  text-align: center;
+}
+
+.deadlines-modal-empty > svg {
+  width: 42px;
+  height: 42px;
+  margin-bottom: 14px;
+  color: var(--dash-burgundy);
+  stroke-width: 1.4;
+}
+
+.deadlines-modal-empty strong {
+  color: #393236;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 20px;
+}
+
+.deadlines-modal-empty p {
+  max-width: 350px;
+  margin: 7px 0 0;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+@keyframes deadlines-modal-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (max-width: 600px) {
+  .deadlines-modal-header {
+    padding: 16px;
+    grid-template-columns: 48px minmax(0, 1fr) 34px;
+    gap: 11px;
+  }
+
+  .deadlines-modal-icon {
+    width: 48px;
+    height: 48px;
+  }
+
+  .deadlines-modal-header h2 {
+    font-size: 24px;
+  }
+
+  .deadlines-modal-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .deadline-filters {
+    width: 100%;
+  }
+
+  .deadline-filters button {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .deadlines-modal-list > button {
+    padding: 14px 15px;
+    grid-template-columns: 42px minmax(0, 1fr);
+  }
+
+  .deadline-modal-item-icon {
+    width: 42px;
+    height: 42px;
+  }
+
+  .deadline-modal-date {
+    grid-column: 2;
+    justify-items: start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .deadlines-modal {
+    animation: none;
+  }
+}

@@ -7,9 +7,9 @@ import {
   BellOff,
   Bug,
   CalendarDays,
-  Check,
   CheckSquare,
   ChevronDown,
+  CircleAlert,
   CircleCheckBig,
   Code2,
   Folder,
@@ -17,6 +17,7 @@ import {
   Home,
   LogOut,
   ListChecks,
+  Minus,
   Plus,
   RefreshCcw,
   Search,
@@ -27,26 +28,26 @@ import {
   Users,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import BugDetailsModal from '../components/BugDetailsModal';
+import CreateBugModal from '../components/CreateBugModal';
 import CreateProjectModal from '../components/CreateProjectModal';
+import DeadlinesModal from '../components/DeadlinesModal';
 import '../styles/Dashboard.css';
 import { clearLocalSession, readLocalSession } from '../utils/authStorage';
+import { readStoredBugs } from '../utils/bugStorage';
 import {
   markAllUserNotificationsRead,
   readUserNotifications,
 } from '../utils/notificationStorage';
 import { readStoredProjects } from '../utils/projectStorage';
 
-const recentBugs = [];
-const initialTasks = [];
-
 const navigationItems = [
-  { label: 'Dashboard', icon: Home, active: true },
-  { label: 'Projects', icon: Folder },
-  { label: 'Bugs', icon: Bug },
-  { label: 'My Tasks', icon: CheckSquare },
-  { label: 'Report', icon: BarChart3 },
-  { label: 'Settings', icon: Settings },
+  { label: 'Dashboard', icon: Home, path: '/dashboard', active: true },
+  { label: 'Projects', icon: Folder, path: '/projects' },
+  { label: 'My Tasks', icon: CheckSquare, path: '/tasks' },
+  { label: 'Report', icon: BarChart3, path: '/reports' },
+  { label: 'Settings', icon: Settings, path: '/settings' },
 ];
 
 const getInitials = (name = 'DevTrack User') => name
@@ -64,6 +65,20 @@ const formatProjectDate = (date) => {
     day: 'numeric',
     year: 'numeric',
   });
+};
+
+const formatBugUpdated = (timestamp) => {
+  const updatedAt = new Date(timestamp).getTime();
+  const elapsedMinutes = Math.max(0, Math.floor((Date.now() - updatedAt) / 60000));
+
+  if (elapsedMinutes < 1) return 'Just now';
+  if (elapsedMinutes < 60) return `${elapsedMinutes} min${elapsedMinutes === 1 ? '' : 's'} ago`;
+
+  const elapsedHours = Math.floor(elapsedMinutes / 60);
+  if (elapsedHours < 24) return `${elapsedHours} hour${elapsedHours === 1 ? '' : 's'} ago`;
+
+  const elapsedDays = Math.floor(elapsedHours / 24);
+  return `${elapsedDays} day${elapsedDays === 1 ? '' : 's'} ago`;
 };
 
 const projectIconTypes = [
@@ -98,6 +113,17 @@ const getDeadlineDetails = (endDate) => {
   };
 };
 
+const getSprintDaysLabel = (endDate) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const end = new Date(`${endDate}T00:00:00`);
+  const daysLeft = Math.ceil((end.getTime() - today.getTime()) / 86400000);
+
+  if (daysLeft < 0) return `${Math.abs(daysLeft)}d overdue`;
+  if (daysLeft === 0) return 'Ends today';
+  return `${daysLeft} day${daysLeft === 1 ? '' : 's'} left`;
+};
+
 const ProjectIcon = ({ type }) => {
   const icons = {
     'software-development': <Code2 />,
@@ -110,6 +136,18 @@ const ProjectIcon = ({ type }) => {
   return <span className={`project-icon project-icon-${type}`}>{icons[type] || icons.other}</span>;
 };
 
+const BugPriorityIcon = ({ priority }) => {
+  const icons = {
+    Critical: CircleAlert,
+    High: ArrowUp,
+    Medium: Minus,
+    Low: ArrowDown,
+  };
+  const Icon = icons[priority] || CircleAlert;
+
+  return <Icon aria-hidden="true" />;
+};
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const session = readLocalSession();
@@ -117,34 +155,115 @@ const Dashboard = () => {
   const [profileOpen, setProfileOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState(() => readUserNotifications(session?.id));
-  const [completedTasks, setCompletedTasks] = useState([]);
   const [notice, setNotice] = useState('');
+  const [bugModalOpen, setBugModalOpen] = useState(false);
   const [projectModalOpen, setProjectModalOpen] = useState(false);
+  const [deadlinesModalOpen, setDeadlinesModalOpen] = useState(false);
+  const [selectedBug, setSelectedBug] = useState(null);
   const [projects, setProjects] = useState(() => readStoredProjects().filter((project) => (
     project.ownerId === session?.id || project.teamMemberIds?.includes(session?.id)
   )));
+  const [bugs, setBugs] = useState(() => {
+    const availableProjectIds = new Set(projects.map((project) => project.id));
+    return readStoredBugs().filter((bug) => availableProjectIds.has(bug.projectId));
+  });
   const notificationMenuRef = useRef(null);
 
   const unreadNotificationCount = notifications.filter((notification) => !notification.read).length;
+  const openBugCount = bugs.filter((bug) => ['New', 'Assigned', 'Reopened'].includes(bug.status)).length;
+  const inProgressBugCount = bugs.filter((bug) => bug.status === 'In Progress').length;
+  const resolvedBugCount = bugs.filter((bug) => bug.status === 'Closed').length;
+  const recentBugs = useMemo(() => [...bugs]
+    .sort((first, second) => (
+      new Date(second.updatedAt || second.createdAt).getTime()
+      - new Date(first.updatedAt || first.createdAt).getTime()
+    ))
+    .slice(0, 5)
+    .map((bug) => ({
+      ...bug,
+      assignee: bug.assigneeName || 'Unassigned',
+      initials: bug.assigneeName ? getInitials(bug.assigneeName) : '—',
+      updated: formatBugUpdated(bug.updatedAt || bug.createdAt),
+    })), [bugs]);
   const activeProjects = useMemo(() => projects
     .filter((project) => project.status === 'active')
     .map((project) => ({
       ...project,
       progress: project.progress ?? 0,
-      bugs: project.bugCount ?? 0,
+      bugs: bugs.filter((bug) => bug.projectId === project.id).length,
       due: formatProjectDate(project.endDate),
       icon: getProjectIconType(project.type),
-    })), [projects]);
-  const deadlines = useMemo(() => projects
-    .filter((project) => project.endDate)
-    .sort((first, second) => first.endDate.localeCompare(second.endDate))
-    .slice(0, 3)
-    .map((project) => ({
-      id: project.id,
-      title: project.name,
-      date: formatProjectDate(project.endDate),
-      ...getDeadlineDetails(project.endDate),
-    })), [projects]);
+    })), [bugs, projects]);
+  const deadlines = useMemo(() => {
+    const projectById = new Map(projects.map((project) => [project.id, project]));
+    const projectDeadlines = projects
+      .filter((project) => project.endDate && project.status !== 'completed')
+      .map((project) => ({
+        id: `project-${project.id}`,
+        type: 'project',
+        projectId: project.id,
+        title: project.name,
+        subtitle: `${project.key} · Project milestone`,
+        dueDate: project.endDate,
+      }));
+    const bugDeadlines = bugs
+      .filter((bug) => bug.dueDate && bug.status !== 'Closed')
+      .map((bug) => ({
+        id: `bug-${bug.storageId || bug.id}`,
+        type: 'bug',
+        projectId: bug.projectId,
+        bug,
+        title: bug.title,
+        subtitle: `${bug.id} · ${projectById.get(bug.projectId)?.name || bug.projectName || 'Unknown project'}`,
+        dueDate: bug.dueDate,
+      }));
+
+    return [...projectDeadlines, ...bugDeadlines]
+      .sort((first, second) => first.dueDate.localeCompare(second.dueDate))
+      .map((deadline) => ({
+        ...deadline,
+        date: formatProjectDate(deadline.dueDate),
+        ...getDeadlineDetails(deadline.dueDate),
+      }));
+  }, [bugs, projects]);
+  const previewDeadlines = deadlines.slice(0, 3);
+  const assignedTasks = useMemo(() => [...bugs]
+    .filter((bug) => bug.assigneeId === session?.id)
+    .sort((first, second) => {
+      const firstClosed = first.status === 'Closed' ? 1 : 0;
+      const secondClosed = second.status === 'Closed' ? 1 : 0;
+      if (firstClosed !== secondClosed) return firstClosed - secondClosed;
+
+      return new Date(second.updatedAt || second.createdAt).getTime()
+        - new Date(first.updatedAt || first.createdAt).getTime();
+    })
+    .slice(0, 4), [bugs, session?.id]);
+  const currentSprint = useMemo(() => {
+    const activeSprints = projects.flatMap((project) => {
+      const sprint = project.sprints?.find((item) => (
+        item.id === project.activeSprintId && item.status === 'active'
+      ));
+      return sprint ? [{ ...sprint, projectId: project.id, projectName: project.name }] : [];
+    }).sort((first, second) => first.endDate.localeCompare(second.endDate));
+
+    if (activeSprints.length === 0) return null;
+
+    const sprint = activeSprints[0];
+    const sprintBugs = bugs.filter((bug) => bug.projectId === sprint.projectId);
+    const open = sprintBugs.filter((bug) => ['New', 'Assigned', 'Reopened'].includes(bug.status)).length;
+    const inProgress = sprintBugs.filter((bug) => bug.status === 'In Progress').length;
+    const resolved = sprintBugs.filter((bug) => bug.status === 'Closed').length;
+    const progress = sprintBugs.length > 0 ? Math.round((resolved / sprintBugs.length) * 100) : 0;
+
+    return {
+      ...sprint,
+      open,
+      inProgress,
+      resolved,
+      progress,
+      daysLabel: getSprintDaysLabel(sprint.endDate),
+    };
+  }, [bugs, projects]);
   const teamCount = useMemo(() => {
     const memberIds = new Set();
 
@@ -188,21 +307,13 @@ const Dashboard = () => {
   const filteredBugs = useMemo(() => recentBugs.filter((bug) => (
     !normalizedSearch
     || `${bug.id} ${bug.title} ${bug.assignee} ${bug.status}`.toLowerCase().includes(normalizedSearch)
-  )), [normalizedSearch]);
+  )), [normalizedSearch, recentBugs]);
   const filteredProjects = useMemo(() => activeProjects.filter((project) => (
     !normalizedSearch || `${project.name} ${project.key}`.toLowerCase().includes(normalizedSearch)
   )), [activeProjects, normalizedSearch]);
 
   const showComingSoon = (feature) => {
     setNotice(`${feature} will be connected in the next development phase.`);
-  };
-
-  const toggleTask = (taskId) => {
-    setCompletedTasks((current) => (
-      current.includes(taskId)
-        ? current.filter((id) => id !== taskId)
-        : [...current, taskId]
-    ));
   };
 
   const handleLogout = () => {
@@ -223,12 +334,15 @@ const Dashboard = () => {
         </button>
 
         <nav className="dashboard-navigation" aria-label="Dashboard navigation">
-          {navigationItems.map(({ label, icon: Icon, active }) => (
+          {navigationItems.map(({ label, icon: Icon, active, path }) => (
             <button
               className={active ? 'is-active' : ''}
               type="button"
               key={label}
-              onClick={() => active ? undefined : showComingSoon(label)}
+              onClick={() => {
+                if (path && !active) navigate(path);
+                else if (!active) showComingSoon(label);
+              }}
             >
               <Icon aria-hidden="true" />
               <span>{label}</span>
@@ -324,8 +438,12 @@ const Dashboard = () => {
                   setNotificationsOpen(false);
                 }}
               >
-                <span className="account-avatar">{getInitials(session?.fullName)}</span>
-                <span className="account-name">{session?.fullName}</span>
+                <span className="account-avatar">
+                  {session?.profileImage
+                    ? <img src={session.profileImage} alt="" />
+                    : getInitials(session?.nickname || session?.fullName)}
+                </span>
+                <span className="account-name">{session?.nickname || session?.fullName}</span>
                 <ChevronDown aria-hidden="true" />
               </button>
               {profileOpen && (
@@ -354,7 +472,14 @@ const Dashboard = () => {
                 <span>Here’s what’s happening with your projects today.</span>
               </div>
               <div className="dashboard-actions">
-                <button className="primary-dashboard-action" type="button" onClick={() => showComingSoon('Create Bug')}>
+                <button
+                  className="primary-dashboard-action"
+                  type="button"
+                  onClick={() => {
+                    setNotice('');
+                    setBugModalOpen(true);
+                  }}
+                >
                   <Plus /> Create Bug
                 </button>
                 <button
@@ -372,15 +497,15 @@ const Dashboard = () => {
             <section className="metrics-grid" aria-label="Dashboard statistics">
               <article>
                 <span className="metric-icon metric-icon-red"><Bug /></span>
-                <div><p>Open Bugs</p><strong>0</strong></div>
+                <div><p>Open Bugs</p><strong>{openBugCount}</strong></div>
               </article>
               <article>
                 <span className="metric-icon metric-icon-orange"><RefreshCcw /></span>
-                <div><p>In Progress</p><strong>0</strong></div>
+                <div><p>In Progress</p><strong>{inProgressBugCount}</strong></div>
               </article>
               <article>
                 <span className="metric-icon metric-icon-green"><CircleCheckBig /></span>
-                <div><p>Resolved</p><strong>0</strong></div>
+                <div><p>Resolved</p><strong>{resolvedBugCount}</strong></div>
               </article>
               <article>
                 <span className="metric-icon metric-icon-gray"><Users /></span>
@@ -398,13 +523,24 @@ const Dashboard = () => {
                   <thead><tr><th>ID</th><th>Title</th><th>Priority</th><th>Status</th><th>Assignee</th><th>Updated</th></tr></thead>
                   <tbody>
                     {filteredBugs.map((bug) => (
-                      <tr key={bug.id}>
+                      <tr
+                        className="dashboard-bug-row"
+                        key={bug.storageId || bug.id}
+                        onClick={() => setSelectedBug(bug)}
+                      >
                         <td>{bug.id}</td>
-                        <td>{bug.title}</td>
+                        <td>
+                          <button
+                            className="dashboard-bug-title"
+                            type="button"
+                            aria-label={`Open bug ${bug.id}: ${bug.title}`}
+                            onClick={() => setSelectedBug(bug)}
+                          >
+                            {bug.title}
+                          </button>
+                        </td>
                         <td><span className={`table-pill priority-${bug.priority.toLowerCase()}`}>
-                          {bug.priority === 'High' && <ArrowUp />}
-                          {bug.priority === 'Low' && <ArrowDown />}
-                          {bug.priority === 'Medium' && '−'} {bug.priority}
+                          <BugPriorityIcon priority={bug.priority} /> {bug.priority}
                         </span></td>
                         <td><span className={`table-pill status-${bug.status.toLowerCase().replace(' ', '-')}`}>{bug.status}</span></td>
                         <td><span className="assignee-cell"><i>{bug.initials}</i>{bug.assignee}</span></td>
@@ -420,17 +556,22 @@ const Dashboard = () => {
             <section className="dashboard-panel active-projects-panel">
               <div className="panel-heading">
                 <h2>Active Projects</h2>
-                <button type="button" onClick={() => showComingSoon('All projects')}>View all <ArrowRight /></button>
+                <button type="button" onClick={() => navigate('/projects')}>View all <ArrowRight /></button>
               </div>
               <div className="project-list">
                 <div className="project-row project-row-head"><span>Project</span><span>Progress</span><span>Bugs</span><span>Due Date</span></div>
                 {filteredProjects.map((project) => (
-                  <div className="project-row" key={project.id}>
+                  <Link
+                    className="project-row project-row-link"
+                    key={project.id}
+                    to={`/projects/${project.id}`}
+                    aria-label={`Open project ${project.name}`}
+                  >
                     <span className="project-name"><ProjectIcon type={project.icon} />{project.name}</span>
                     <span className="project-progress"><i><b style={{ width: `${project.progress}%` }} /></i>{project.progress}%</span>
                     <span>{project.bugs}</span>
                     <span>{project.due}</span>
-                  </div>
+                  </Link>
                 ))}
                 {filteredProjects.length === 0 && <p className="empty-projects">No projects match your search.</p>}
               </div>
@@ -440,19 +581,42 @@ const Dashboard = () => {
           <aside className="dashboard-rail">
             <section className="rail-section sprint-section">
               <h2>Current Sprint</h2>
-              <div className="empty-sprint">
-                <span><RefreshCcw /></span>
-                <strong>No active sprint</strong>
-                <p>Create a project and start a sprint to see its progress here.</p>
-              </div>
+              {currentSprint ? (
+                <>
+                  <div className="sprint-title">
+                    <strong>{currentSprint.name}</strong>
+                    <span>{currentSprint.daysLabel}</span>
+                  </div>
+                  <p>
+                    {currentSprint.projectName} · {formatProjectDate(currentSprint.startDate)} – {formatProjectDate(currentSprint.endDate)}
+                  </p>
+                  <div className="sprint-progress">
+                    <i><b style={{ width: `${currentSprint.progress}%` }} /></i>
+                    <span>{currentSprint.progress}%</span>
+                  </div>
+                  <div className="sprint-stats">
+                    <div><strong>{currentSprint.open}</strong><span>Open</span></div>
+                    <div><strong>{currentSprint.inProgress}</strong><span>In Progress</span></div>
+                    <div><strong>{currentSprint.resolved}</strong><span>Resolved</span></div>
+                  </div>
+                </>
+              ) : (
+                <div className="empty-sprint">
+                  <span><RefreshCcw /></span>
+                  <strong>No active sprint</strong>
+                  <p>Create a project and start a sprint to see its progress here.</p>
+                </div>
+              )}
             </section>
 
             <section className="rail-section deadlines-section">
-              <div className="rail-heading"><h2>Upcoming Deadlines</h2><button type="button" onClick={() => showComingSoon('All deadlines')}>View all <ArrowRight /></button></div>
+              <div className="rail-heading"><h2>Upcoming Deadlines</h2><button type="button" onClick={() => setDeadlinesModalOpen(true)}>View all <ArrowRight /></button></div>
               <div className="deadline-list">
-                {deadlines.length > 0 ? deadlines.map((deadline) => (
+                {previewDeadlines.length > 0 ? previewDeadlines.map((deadline) => (
                   <article key={deadline.id}>
-                    <span className="deadline-icon"><CalendarDays /></span>
+                    <span className={`deadline-icon deadline-icon-${deadline.type}`}>
+                      {deadline.type === 'bug' ? <Bug /> : <CalendarDays />}
+                    </span>
                     <div><strong>{deadline.title}</strong><span>{deadline.date}</span></div>
                     <i className={`deadline-days deadline-${deadline.tone}`}>{deadline.days}</i>
                   </article>
@@ -461,29 +625,58 @@ const Dashboard = () => {
             </section>
 
             <section className="rail-section tasks-section">
-              <div className="rail-heading"><h2>My Assigned Tasks</h2><button type="button" onClick={() => showComingSoon('All tasks')}>View all <ArrowRight /></button></div>
+              <div className="rail-heading"><h2>My Assigned Tasks</h2><button type="button" onClick={() => navigate('/tasks')}>View all <ArrowRight /></button></div>
               <div className="task-list">
-                {initialTasks.length > 0 ? initialTasks.map((task) => {
-                  const completed = completedTasks.includes(task.id);
-                  return (
-                    <label className={completed ? 'is-completed' : ''} key={task.id}>
-                      <input type="checkbox" checked={completed} onChange={() => toggleTask(task.id)} />
-                      <span className="task-checkbox">{completed && <Check />}</span>
-                      <span className="task-copy"><strong>{task.title}</strong><small>{task.id}</small></span>
-                      <i className={`task-priority priority-${task.priority.toLowerCase()}`}>
-                        {task.priority === 'High' && '▲ '}
-                        {task.priority === 'Medium' && '− '}
-                        {task.priority === 'Low' && '▼ '}
-                        {task.priority}
-                      </i>
-                    </label>
-                  );
-                }) : <p className="empty-rail-state">No tasks assigned to you.</p>}
+                {assignedTasks.length > 0 ? assignedTasks.map((task) => (
+                  <button
+                    className="dashboard-task-row"
+                    type="button"
+                    key={task.storageId || task.id}
+                    aria-label={`Open assigned task ${task.id}: ${task.title}`}
+                    onClick={() => setSelectedBug(task)}
+                  >
+                    <span className={`task-status-icon status-${(task.status || 'New').toLowerCase().replaceAll(' ', '-')}`}>
+                      {task.status === 'Closed' ? <CircleCheckBig /> : <Bug />}
+                    </span>
+                    <span className="task-copy"><strong>{task.title}</strong><small>{task.id} · {task.status || 'New'}</small></span>
+                    <i className={`task-priority priority-${(task.priority || 'High').toLowerCase()}`}>
+                      <BugPriorityIcon priority={task.priority || 'High'} /> {task.priority || 'High'}
+                    </i>
+                  </button>
+                )) : <p className="empty-rail-state">No tasks assigned to you.</p>}
               </div>
             </section>
           </aside>
         </div>
       </div>
+
+      {deadlinesModalOpen && (
+        <DeadlinesModal
+          deadlines={deadlines}
+          onClose={() => setDeadlinesModalOpen(false)}
+          onOpenDeadline={(deadline) => {
+            setDeadlinesModalOpen(false);
+            if (deadline.type === 'bug') {
+              setSelectedBug(deadline.bug);
+            } else {
+              navigate(`/projects/${deadline.projectId}`);
+            }
+          }}
+        />
+      )}
+
+      {bugModalOpen && (
+        <CreateBugModal
+          currentUser={session}
+          projects={projects}
+          onClose={() => setBugModalOpen(false)}
+          onBugCreated={(bug) => {
+            setBugs((current) => [...current, bug]);
+            setBugModalOpen(false);
+            setNotice(`${bug.id} was created successfully.`);
+          }}
+        />
+      )}
 
       {projectModalOpen && (
         <CreateProjectModal
@@ -494,6 +687,39 @@ const Dashboard = () => {
             setProjects((current) => [...current, project]);
             setProjectModalOpen(false);
             setNotice(`${project.name} was created successfully.`);
+          }}
+        />
+      )}
+
+      {selectedBug && (
+        <BugDetailsModal
+          bug={selectedBug}
+          currentUser={session}
+          canEditWorkflow={(
+            selectedBug.assigneeId === session.id
+            || projects.some((project) => (
+              project.id === selectedBug.projectId && project.ownerId === session.id
+            ))
+          )}
+          canDelete={(
+            selectedBug.reporterId === session.id
+            || projects.some((project) => (
+              project.id === selectedBug.projectId && project.ownerId === session.id
+            ))
+          )}
+          onClose={() => setSelectedBug(null)}
+          onBugUpdated={(updatedBug) => {
+            setBugs((current) => current.map((bug) => (
+              (bug.storageId || bug.id) === (updatedBug.storageId || updatedBug.id) ? updatedBug : bug
+            )));
+            setSelectedBug(updatedBug);
+          }}
+          onBugDeleted={(deletedBug) => {
+            setBugs((current) => current.filter((bug) => (
+              (bug.storageId || bug.id) !== (deletedBug.storageId || deletedBug.id)
+            )));
+            setSelectedBug(null);
+            setNotice(`${deletedBug.id} was deleted.`);
           }}
         />
       )}

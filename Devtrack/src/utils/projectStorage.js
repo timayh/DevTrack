@@ -17,6 +17,14 @@ export const createProjectId = () => {
   return `project-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 };
 
+const createSprintId = () => {
+  if (typeof window.crypto?.randomUUID === 'function') {
+    return window.crypto.randomUUID();
+  }
+
+  return `sprint-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+};
+
 export const saveProject = (projectData) => {
   const project = {
     ...projectData,
@@ -29,4 +37,39 @@ export const saveProject = (projectData) => {
   const projects = readStoredProjects();
   localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify([...projects, project]));
   return project;
+};
+
+export const startProjectSprint = (projectId, sprintData, userId) => {
+  const projects = readStoredProjects();
+  const projectIndex = projects.findIndex((project) => project.id === projectId);
+
+  if (projectIndex === -1 || projects[projectIndex].ownerId !== userId) return null;
+
+  const project = projects[projectIndex];
+  const hasActiveSprint = (project.sprints || []).some((sprint) => (
+    sprint.id === project.activeSprintId && sprint.status === 'active'
+  ));
+  if (hasActiveSprint) return null;
+
+  const sprint = {
+    id: createSprintId(),
+    name: sprintData.name.trim(),
+    goal: sprintData.goal.trim(),
+    startDate: sprintData.startDate,
+    endDate: sprintData.endDate,
+    status: 'active',
+    createdBy: userId,
+    createdAt: new Date().toISOString(),
+  };
+  const updatedProject = {
+    ...project,
+    sprints: [...(project.sprints || []), sprint],
+    activeSprintId: sprint.id,
+    updatedAt: new Date().toISOString(),
+  };
+  const updatedProjects = [...projects];
+  updatedProjects[projectIndex] = updatedProject;
+  localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(updatedProjects));
+
+  return { project: updatedProject, sprint };
 };

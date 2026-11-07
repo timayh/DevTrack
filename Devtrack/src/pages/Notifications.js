@@ -28,11 +28,10 @@ import {
 
 const navigationItems = [
   { label: 'Dashboard', icon: Home, path: '/dashboard' },
-  { label: 'Projects', icon: Folder },
-  { label: 'Bugs', icon: Bug },
-  { label: 'My Tasks', icon: CheckSquare },
-  { label: 'Report', icon: BarChart3 },
-  { label: 'Settings', icon: Settings },
+  { label: 'Projects', icon: Folder, path: '/projects' },
+  { label: 'My Tasks', icon: CheckSquare, path: '/tasks' },
+  { label: 'Report', icon: BarChart3, path: '/reports' },
+  { label: 'Settings', icon: Settings, path: '/settings' },
 ];
 
 const filters = [
@@ -183,8 +182,12 @@ const Notifications = () => {
                 aria-expanded={profileOpen}
                 onClick={() => setProfileOpen((current) => !current)}
               >
-                <span className="account-avatar">{getInitials(session?.fullName)}</span>
-                <span className="account-name">{session?.fullName}</span>
+                <span className="account-avatar">
+                  {session?.profileImage
+                    ? <img src={session.profileImage} alt="" />
+                    : getInitials(session?.nickname || session?.fullName)}
+                </span>
+                <span className="account-name">{session?.nickname || session?.fullName}</span>
                 <ChevronDown aria-hidden="true" />
               </button>
               {profileOpen && (

@@ -4,6 +4,7 @@ import {
   Bug,
   CalendarDays,
   ChevronDown,
+  CircleCheckBig,
   CircleAlert,
   Code2,
   FolderOpen,
@@ -11,13 +12,18 @@ import {
   Image,
   Minus,
   Plus,
+  RefreshCcw,
+  RotateCcw,
   ServerCog,
   Shapes,
   Smartphone,
+  UserRoundCheck,
   X,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import CustomSelect from './CustomSelect';
 import '../styles/CreateBugModal.css';
+import { saveBugAttachments } from '../utils/attachmentStorage';
 import { saveBug } from '../utils/bugStorage';
 
 const projectTypeIcons = {
@@ -28,12 +34,28 @@ const projectTypeIcons = {
   other: Shapes,
 };
 
-const priorityIcons = {
-  High: ArrowUp,
-  Medium: Minus,
-  Low: ArrowDown,
-  Critical: CircleAlert,
+const projectTypeIconClasses = {
+  'software-development': 'select-icon-software-development',
+  'mobile-application': 'select-icon-mobile-application',
+  'api-service': 'select-icon-api-service',
+  website: 'select-icon-website',
+  other: 'select-icon-other',
 };
+
+const priorities = [
+  { value: 'Critical', icon: CircleAlert },
+  { value: 'High', icon: ArrowUp },
+  { value: 'Medium', icon: Minus },
+  { value: 'Low', icon: ArrowDown },
+];
+
+const statusOptions = [
+  { value: 'New', label: 'New', icon: FolderOpen, iconClass: 'select-icon-new' },
+  { value: 'Assigned', label: 'Assigned', icon: UserRoundCheck, iconClass: 'select-icon-assigned' },
+  { value: 'In Progress', label: 'In Progress', icon: RefreshCcw, iconClass: 'select-icon-in-progress' },
+  { value: 'Reopened', label: 'Reopened', icon: RotateCcw, iconClass: 'select-icon-reopened' },
+  { value: 'Closed', label: 'Closed', icon: CircleCheckBig, iconClass: 'select-icon-closed' },
+];
 
 const initialForm = {
   title: '',
@@ -53,26 +75,60 @@ const CreateBugModal = ({ currentUser, projects, onClose, onBugCreated }) => {
   const [errors, setErrors] = useState({});
   const [attachments, setAttachments] = useState([]);
   const [attachmentError, setAttachmentError] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [priorityMenuOpen, setPriorityMenuOpen] = useState(false);
   const firstInputRef = useRef(null);
+  const priorityMenuRef = useRef(null);
   const selectedProject = projects.find((project) => project.id === form.projectId);
-  const ProjectIcon = projectTypeIcons[selectedProject?.type] || Shapes;
-  const PriorityIcon = priorityIcons[form.priority] || ArrowUp;
+  const projectOptions = projects.length > 0 ? projects.map((project) => ({
+    value: project.id,
+    label: project.name,
+    icon: projectTypeIcons[project.type] || Shapes,
+    iconClass: projectTypeIconClasses[project.type] || projectTypeIconClasses.other,
+  })) : [{
+    value: '',
+    label: 'No projects available',
+    icon: Shapes,
+    iconClass: projectTypeIconClasses.other,
+  }];
+  const selectedPriority = priorities.find((priority) => priority.value === form.priority) || priorities[1];
+  const PriorityIcon = selectedPriority.icon;
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     firstInputRef.current?.focus();
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
 
+  useEffect(() => {
     const closeOnEscape = (event) => {
-      if (event.key === 'Escape') onClose();
+      if (event.key !== 'Escape') return;
+
+      if (priorityMenuOpen) {
+        setPriorityMenuOpen(false);
+        return;
+      }
+
+      onClose();
     };
 
     document.addEventListener('keydown', closeOnEscape);
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      document.removeEventListener('keydown', closeOnEscape);
+    return () => document.removeEventListener('keydown', closeOnEscape);
+  }, [onClose, priorityMenuOpen]);
+
+  useEffect(() => {
+    if (!priorityMenuOpen) return undefined;
+
+    const closePriorityMenu = (event) => {
+      if (!priorityMenuRef.current?.contains(event.target)) setPriorityMenuOpen(false);
     };
-  }, [onClose]);
+
+    document.addEventListener('mousedown', closePriorityMenu);
+    return () => document.removeEventListener('mousedown', closePriorityMenu);
+  }, [priorityMenuOpen]);
 
   const updateField = (event) => {
     const { name, value } = event.target;
@@ -106,7 +162,7 @@ const CreateBugModal = ({ currentUser, projects, onClose, onBugCreated }) => {
     return nextErrors;
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     const validationErrors = validate();
 
@@ -115,24 +171,33 @@ const CreateBugModal = ({ currentUser, projects, onClose, onBugCreated }) => {
       return;
     }
 
-    const bug = saveBug({
-      projectId: selectedProject.id,
-      projectKey: selectedProject.key,
-      projectName: selectedProject.name,
-      reporterId: currentUser.id,
-      reporterName: currentUser.fullName,
-      assigneeId: currentUser.id,
-      assigneeName: currentUser.fullName,
-      title: form.title.trim(),
-      description: form.description.trim(),
-      stepsToReproduce: form.stepsToReproduce.trim(),
-      priority: form.priority,
-      status: form.status,
-      dueDate: form.dueDate || null,
-      attachments: attachments.map(({ name, size, type }) => ({ name, size, type })),
-    });
+    setIsSaving(true);
+    setAttachmentError('');
 
-    onBugCreated(bug);
+    try {
+      const storedAttachments = await saveBugAttachments(attachments);
+      const bug = saveBug({
+        projectId: selectedProject.id,
+        projectKey: selectedProject.key,
+        projectName: selectedProject.name,
+        reporterId: currentUser.id,
+        reporterName: currentUser.fullName,
+        assigneeId: currentUser.id,
+        assigneeName: currentUser.fullName,
+        title: form.title.trim(),
+        description: form.description.trim(),
+        stepsToReproduce: form.stepsToReproduce.trim(),
+        priority: form.priority,
+        status: form.status,
+        dueDate: form.dueDate || null,
+        attachments: storedAttachments,
+      });
+
+      onBugCreated(bug);
+    } catch {
+      setAttachmentError('The bug could not be saved. Please try again.');
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -238,48 +303,77 @@ const CreateBugModal = ({ currentUser, projects, onClose, onBugCreated }) => {
             <div className="bug-form-column">
               <div className="bug-form-field">
                 <label htmlFor="bugProject">Project <span>*</span></label>
-                <div className={`bug-select-with-icon ${errors.projectId ? 'has-error' : ''}`}>
-                  <span className={`bug-project-type-icon bug-project-type-${selectedProject?.type || 'other'}`}>
-                    <ProjectIcon aria-hidden="true" />
-                  </span>
-                  <select id="bugProject" name="projectId" value={form.projectId} onChange={updateField} disabled={projects.length === 0}>
-                    {projects.length === 0
-                      ? <option value="">No projects available</option>
-                      : projects.map((project) => <option value={project.id} key={project.id}>{project.name}</option>)}
-                  </select>
-                  <ChevronDown aria-hidden="true" />
-                </div>
+                <CustomSelect
+                  id="bugProject"
+                  ariaLabel="Project"
+                  value={form.projectId}
+                  options={projectOptions}
+                  disabled={projects.length === 0}
+                  className={errors.projectId ? 'has-error' : ''}
+                  onChange={(value) => {
+                    setForm((current) => ({ ...current, projectId: value }));
+                    setErrors((current) => ({ ...current, projectId: '' }));
+                  }}
+                />
                 {errors.projectId && <small className="bug-field-error">{errors.projectId}</small>}
                 {projects.length === 0 && <small>Create a project before reporting a bug.</small>}
               </div>
 
               <div className="bug-form-field">
-                <label htmlFor="bugPriority">Priority <span>*</span></label>
-                <div className={`bug-select-with-icon bug-priority-select priority-${form.priority.toLowerCase()}`}>
-                  <PriorityIcon aria-hidden="true" />
-                  <select id="bugPriority" name="priority" value={form.priority} onChange={updateField}>
-                    <option value="Critical">Critical</option>
-                    <option value="High">High</option>
-                    <option value="Medium">Medium</option>
-                    <option value="Low">Low</option>
-                  </select>
-                  <ChevronDown aria-hidden="true" />
+                <label id="bugPriority-label" htmlFor="bugPriority">Priority <span>*</span></label>
+                <div className="bug-priority-picker" ref={priorityMenuRef}>
+                  <button
+                    id="bugPriority"
+                    className={`bug-priority-trigger bug-priority-${form.priority.toLowerCase()}`}
+                    type="button"
+                    aria-label={`Priority: ${selectedPriority.value}`}
+                    aria-haspopup="listbox"
+                    aria-expanded={priorityMenuOpen}
+                    aria-controls="bugPriority-options"
+                    onClick={() => setPriorityMenuOpen((current) => !current)}
+                  >
+                    <span className="bug-priority-icon"><PriorityIcon aria-hidden="true" /></span>
+                    <span>{selectedPriority.value}</span>
+                    <ChevronDown aria-hidden="true" />
+                  </button>
+                  {priorityMenuOpen && (
+                    <div
+                      className="bug-priority-options"
+                      id="bugPriority-options"
+                      role="listbox"
+                      aria-labelledby="bugPriority-label"
+                    >
+                      {priorities.map(({ value, icon: Icon }) => (
+                        <button
+                          className={`bug-priority-option bug-priority-${value.toLowerCase()}${form.priority === value ? ' is-selected' : ''}`}
+                          type="button"
+                          role="option"
+                          aria-selected={form.priority === value}
+                          key={value}
+                          onClick={() => {
+                            setForm((current) => ({ ...current, priority: value }));
+                            setPriorityMenuOpen(false);
+                          }}
+                        >
+                          <span className="bug-priority-icon"><Icon aria-hidden="true" /></span>
+                          <span>{value}</span>
+                          {form.priority === value && <span className="bug-priority-check" aria-hidden="true">✓</span>}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
               <div className="bug-form-field">
                 <label htmlFor="bugStatus">Status</label>
-                <div className="bug-select-with-icon bug-status-select">
-                  <FolderOpen aria-hidden="true" />
-                  <select id="bugStatus" name="status" value={form.status} onChange={updateField}>
-                    <option value="New">New</option>
-                    <option value="Assigned">Assigned</option>
-                    <option value="In Progress">In Progress</option>
-                    <option value="Reopened">Reopened</option>
-                    <option value="Closed">Closed</option>
-                  </select>
-                  <ChevronDown aria-hidden="true" />
-                </div>
+                <CustomSelect
+                  id="bugStatus"
+                  ariaLabel="Status"
+                  value={form.status}
+                  options={statusOptions}
+                  onChange={(value) => setForm((current) => ({ ...current, status: value }))}
+                />
               </div>
 
               <div className="bug-form-field">
@@ -305,9 +399,9 @@ const CreateBugModal = ({ currentUser, projects, onClose, onBugCreated }) => {
           </div>
 
           <div className="bug-modal-actions">
-            <button type="button" onClick={onClose}>Cancel</button>
-            <button className="create-bug-submit" type="submit" disabled={projects.length === 0}>
-              <Plus /> Create Bug
+            <button type="button" onClick={onClose} disabled={isSaving}>Cancel</button>
+            <button className="create-bug-submit" type="submit" disabled={projects.length === 0 || isSaving}>
+              <Plus /> {isSaving ? 'Saving...' : 'Create Bug'}
             </button>
           </div>
         </form>
