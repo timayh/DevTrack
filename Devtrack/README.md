@@ -29,6 +29,25 @@ Your app is ready to be deployed!
 
 See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
 
+### `npm run deploy`
+
+Builds the production application and publishes the `build` directory to the repository's `gh-pages` branch.
+
+The deployed site is configured for:
+
+`https://timayh.github.io/DevTrack`
+
+The production build uses hash-based routing so direct links and browser refreshes work on GitHub Pages. Local development and automated tests continue to use normal browser routes.
+
+Before the first deployment, push the repository to GitHub. Then run the following commands from the `Devtrack` directory:
+
+```bash
+npm install
+npm run deploy
+```
+
+In the GitHub repository, open **Settings → Pages** and confirm that Pages is deploying from the `gh-pages` branch at the root directory. GitHub may take a few minutes to publish the first deployment.
+
 ### `npm run eject`
 
 **Note: this is a one-way operation. Once you `eject`, you can't go back!**

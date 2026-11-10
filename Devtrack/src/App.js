@@ -1,5 +1,11 @@
 import './styles/global.css';
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import {
+  BrowserRouter,
+  HashRouter,
+  Navigate,
+  Route,
+  Routes,
+} from 'react-router-dom';
 import GetStarted from './components/GetStarted';
 import Hero from './components/Hero';
 import HowItWorks from './components/HowItWorks';
@@ -35,9 +41,11 @@ const ProtectedRoute = ({ children }) => {
   return readLocalSession() ? children : <Navigate to="/login" replace />;
 };
 
+const AppRouter = process.env.NODE_ENV === 'production' ? HashRouter : BrowserRouter;
+
 const App = () => {
   return (
-    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+    <AppRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <ScrollToTop />
       <Routes>
         <Route path="/" element={<LandingPage />} />
@@ -101,7 +109,7 @@ const App = () => {
         />
         <Route path="*" element={<LandingPage />} />
       </Routes>
-    </BrowserRouter>
+    </AppRouter>
   );
 };
 
