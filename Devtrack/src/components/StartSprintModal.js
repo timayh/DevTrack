@@ -1,6 +1,7 @@
 import { CalendarDays, Play, Target, TimerReset, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import '../styles/StartSprintModal.css';
+import { notifyProjectMembers } from '../utils/notificationStorage';
 import { startProjectSprint } from '../utils/projectStorage';
 
 const StartSprintModal = ({ project, currentUser, onClose, onSprintStarted }) => {
@@ -56,6 +57,13 @@ const StartSprintModal = ({ project, currentUser, onClose, onSprintStarted }) =>
       setErrors({ submit: 'The sprint could not be started. Check that no other sprint is active.' });
       return;
     }
+
+    notifyProjectMembers({
+      project: result.project,
+      actor: currentUser,
+      message: `${currentUser.nickname || currentUser.fullName} started ${result.sprint.name}`,
+      detail: `${project.name} · ${result.sprint.startDate} to ${result.sprint.endDate}`,
+    });
 
     onSprintStarted(result);
   };

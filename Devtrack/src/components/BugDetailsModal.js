@@ -31,6 +31,8 @@ import {
   deleteStoredBug,
   updateBugWorkflow,
 } from '../utils/bugStorage';
+import { notifyBugActivity } from '../utils/notificationStorage';
+import { readStoredProjects } from '../utils/projectStorage';
 
 const priorityIcons = {
   Critical: CircleAlert,
@@ -118,6 +120,9 @@ const BugDetailsModal = ({
   const priority = currentBug.priority || 'High';
   const status = currentBug.status || 'New';
   const statusClass = status.toLowerCase().replaceAll(' ', '-');
+  const project = readStoredProjects().find((item) => item.id === currentBug.projectId);
+  const actorName = currentUser.nickname || currentUser.fullName;
+  const notificationDetail = `${currentBug.title} · ${project?.name || currentBug.projectName || 'Unknown project'}`;
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -205,22 +210,41 @@ const BugDetailsModal = ({
 
     const updatedBug = addBugComment(currentBug.storageId || currentBug.id, {
       userId: currentUser.id,
-      authorName: currentUser.fullName,
+      authorName: currentUser.nickname || currentUser.fullName,
       body: comment,
     });
 
     if (!updatedBug) return;
     setCurrentBug(updatedBug);
     setComment('');
+    notifyBugActivity({
+      project,
+      bug: updatedBug,
+      actor: currentUser,
+      selfMessage: `You commented on bug ${updatedBug.id}`,
+      teamMessage: `${actorName} commented on bug ${updatedBug.id}`,
+      detail: notificationDetail,
+      category: 'comment',
+    });
     onBugUpdated?.(updatedBug);
   };
 
   const changeWorkflowField = (field, value) => {
     if (!canEditWorkflow) return;
+    const previousValue = currentBug[field];
+    if (previousValue === value) return;
 
     const updatedBug = updateBugWorkflow(currentBug.storageId || currentBug.id, { [field]: value });
     if (!updatedBug) return;
     setCurrentBug(updatedBug);
+    notifyBugActivity({
+      project,
+      bug: updatedBug,
+      actor: currentUser,
+      selfMessage: `You changed ${updatedBug.id} ${field} to ${value}`,
+      teamMessage: `${actorName} changed ${updatedBug.id} ${field} to ${value}`,
+      detail: `${updatedBug.title} · Previously ${previousValue}`,
+    });
     onBugUpdated?.(updatedBug);
   };
 
@@ -232,6 +256,14 @@ const BugDetailsModal = ({
     const deleted = deleteStoredBug(currentBug.storageId || currentBug.id);
 
     if (deleted) {
+      notifyBugActivity({
+        project,
+        bug: currentBug,
+        actor: currentUser,
+        selfMessage: `You deleted bug ${currentBug.id}`,
+        teamMessage: `${actorName} deleted bug ${currentBug.id}`,
+        detail: notificationDetail,
+      });
       onBugDeleted?.(currentBug);
       return;
     }

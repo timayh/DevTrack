@@ -25,6 +25,7 @@ import CustomSelect from './CustomSelect';
 import '../styles/CreateBugModal.css';
 import { saveBugAttachments } from '../utils/attachmentStorage';
 import { saveBug } from '../utils/bugStorage';
+import { notifyBugActivity } from '../utils/notificationStorage';
 
 const projectTypeIcons = {
   'software-development': Code2,
@@ -181,9 +182,9 @@ const CreateBugModal = ({ currentUser, projects, onClose, onBugCreated }) => {
         projectKey: selectedProject.key,
         projectName: selectedProject.name,
         reporterId: currentUser.id,
-        reporterName: currentUser.fullName,
+        reporterName: currentUser.nickname || currentUser.fullName,
         assigneeId: currentUser.id,
-        assigneeName: currentUser.fullName,
+        assigneeName: currentUser.nickname || currentUser.fullName,
         title: form.title.trim(),
         description: form.description.trim(),
         stepsToReproduce: form.stepsToReproduce.trim(),
@@ -191,6 +192,16 @@ const CreateBugModal = ({ currentUser, projects, onClose, onBugCreated }) => {
         status: form.status,
         dueDate: form.dueDate || null,
         attachments: storedAttachments,
+      });
+
+      const actorName = currentUser.nickname || currentUser.fullName;
+      notifyBugActivity({
+        project: selectedProject,
+        bug,
+        actor: currentUser,
+        selfMessage: `You created bug ${bug.id}`,
+        teamMessage: `${actorName} created bug ${bug.id}`,
+        detail: `${bug.title} · ${selectedProject.name}`,
       });
 
       onBugCreated(bug);
@@ -379,9 +390,9 @@ const CreateBugModal = ({ currentUser, projects, onClose, onBugCreated }) => {
               <div className="bug-form-field">
                 <label htmlFor="bugAssignee">Assignee</label>
                 <div className="bug-select-with-icon bug-assignee-select">
-                  <span>{currentUser.fullName.split(' ').map((part) => part[0]).slice(0, 2).join('')}</span>
+                  <span>{(currentUser.nickname || currentUser.fullName).split(' ').map((part) => part[0]).slice(0, 2).join('')}</span>
                   <select id="bugAssignee" value={currentUser.id} disabled>
-                    <option value={currentUser.id}>{currentUser.fullName}</option>
+                    <option value={currentUser.id}>{currentUser.nickname || currentUser.fullName}</option>
                   </select>
                   <ChevronDown aria-hidden="true" />
                 </div>

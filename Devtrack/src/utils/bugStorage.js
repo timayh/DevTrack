@@ -121,3 +121,37 @@ export const deleteStoredBug = (bugIdentifier) => {
   localStorage.setItem(BUGS_STORAGE_KEY, JSON.stringify(remainingBugs));
   return true;
 };
+
+export const updateStoredBugUserName = (userId, displayName) => {
+  const bugs = readStoredBugs();
+  let hasChanges = false;
+
+  const updatedBugs = bugs.map((bug) => {
+    const changes = {};
+
+    if (bug.assigneeId === userId && bug.assigneeName !== displayName) {
+      changes.assigneeName = displayName;
+    }
+    if (bug.reporterId === userId && bug.reporterName !== displayName) {
+      changes.reporterName = displayName;
+    }
+
+    const comments = (bug.comments || []).map((comment) => {
+      if (comment.userId !== userId || comment.authorName === displayName) return comment;
+      return { ...comment, authorName: displayName };
+    });
+    const commentsChanged = comments.some((comment, index) => comment !== bug.comments[index]);
+
+    if (commentsChanged) changes.comments = comments;
+    if (Object.keys(changes).length === 0) return bug;
+
+    hasChanges = true;
+    return { ...bug, ...changes };
+  });
+
+  if (hasChanges) {
+    localStorage.setItem(BUGS_STORAGE_KEY, JSON.stringify(updatedBugs));
+  }
+
+  return updatedBugs;
+};

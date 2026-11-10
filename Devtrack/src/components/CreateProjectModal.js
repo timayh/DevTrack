@@ -132,7 +132,7 @@ const CreateProjectModal = ({ currentUser, existingProjects, onClose, onProjectC
     const project = saveProject({
       ownerId: currentUser.id,
       leadId: currentUser.id,
-      leadName: currentUser.fullName,
+      leadName: currentUser.nickname || currentUser.fullName,
       teamMemberIds: [],
       name: form.name.trim(),
       key: form.key.trim(),
@@ -309,9 +309,9 @@ const CreateProjectModal = ({ currentUser, existingProjects, onClose, onProjectC
               <div className="project-form-field">
                 <label htmlFor="projectLead">Project Lead</label>
                 <div className="project-select-with-icon project-lead-select">
-                  <span>{currentUser.fullName.split(' ').map((part) => part[0]).slice(0, 2).join('')}</span>
+                  <span>{(currentUser.nickname || currentUser.fullName).split(' ').map((part) => part[0]).slice(0, 2).join('')}</span>
                   <select id="projectLead" value={currentUser.id} disabled>
-                    <option value={currentUser.id}>{currentUser.fullName}</option>
+                    <option value={currentUser.id}>{currentUser.nickname || currentUser.fullName}</option>
                   </select>
                   <ChevronDown aria-hidden="true" />
                 </div>

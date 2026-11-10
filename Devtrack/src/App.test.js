@@ -163,6 +163,29 @@ test('updates the local nickname and profile photo from settings', async () => {
     email: 'jane@example.com',
     usage: 'create-project',
   }));
+  localStorage.setItem(BUGS_STORAGE_KEY, JSON.stringify([{
+    storageId: 'settings-bug',
+    id: 'SET-001',
+    projectId: 'settings-project',
+    assigneeId: 'settings-user',
+    assigneeName: 'Jane Doe',
+    reporterId: 'settings-user',
+    reporterName: 'Jane Doe',
+    title: 'Update displayed identity',
+    comments: [{
+      id: 'settings-comment',
+      userId: 'settings-user',
+      authorName: 'Jane Doe',
+      body: 'This name should update too.',
+    }],
+  }]));
+  localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify([{
+    id: 'settings-project',
+    ownerId: 'settings-user',
+    leadId: 'settings-user',
+    leadName: 'Jane Doe',
+    name: 'Settings Project',
+  }]));
   window.history.pushState({}, '', '/settings');
   render(<App />);
 
@@ -183,6 +206,12 @@ test('updates the local nickname and profile photo from settings', async () => {
   expect(session.nickname).toBe('Janie');
   expect(session.profileImage).toBe(savedUser.profileImage);
   expect(screen.getByText('Janie')).toBeInTheDocument();
+  const [savedBug] = JSON.parse(localStorage.getItem(BUGS_STORAGE_KEY));
+  const [savedProject] = JSON.parse(localStorage.getItem(PROJECTS_STORAGE_KEY));
+  expect(savedBug.assigneeName).toBe('Janie');
+  expect(savedBug.reporterName).toBe('Janie');
+  expect(savedBug.comments[0].authorName).toBe('Janie');
+  expect(savedProject.leadName).toBe('Janie');
 });
 
 test('changes the local account password from settings', async () => {
@@ -425,7 +454,7 @@ test('creates and stores a bug from the dashboard modal', async () => {
     ownerId: 'test-user',
     leadId: 'test-user',
     leadName: 'Jane Doe',
-    teamMemberIds: [],
+    teamMemberIds: ['team-member'],
     name: 'Capstone Tracker',
     key: 'CAP',
     description: 'Track the capstone project.',
@@ -468,6 +497,25 @@ test('creates and stores a bug from the dashboard modal', async () => {
   expect(bug.projectId).toBe('project-1');
   expect(bug.priority).toBe('Critical');
   expect(bug.status).toBe('New');
+
+  const bugNotifications = JSON.parse(localStorage.getItem(NOTIFICATIONS_STORAGE_KEY));
+  expect(bugNotifications).toEqual(expect.arrayContaining([
+    expect.objectContaining({
+      userId: 'test-user',
+      message: 'You created bug CAP-001',
+      category: 'bug',
+      read: false,
+    }),
+    expect.objectContaining({
+      userId: 'team-member',
+      message: 'Jane Doe created bug CAP-001',
+      category: 'bug',
+      read: false,
+    }),
+  ]));
+
+  fireEvent.click(screen.getByRole('button', { name: /view notifications/i }));
+  expect(screen.getByText('You created bug CAP-001')).toBeInTheDocument();
 
   const openBugsMetric = screen.getByText('Open Bugs').closest('article');
   expect(openBugsMetric).toHaveTextContent('1');
@@ -623,6 +671,15 @@ test('shows local projects on the projects page and filters them', async () => {
   });
   expect(JSON.parse(localStorage.getItem(BUGS_STORAGE_KEY))).toEqual([]);
   expect(screen.getByText(/no bugs in this project/i)).toBeInTheDocument();
+  const activityMessages = JSON.parse(localStorage.getItem(NOTIFICATIONS_STORAGE_KEY))
+    .filter((notification) => notification.userId === 'test-user')
+    .map((notification) => notification.message);
+  expect(activityMessages).toEqual(expect.arrayContaining([
+    'You commented on bug CAP-001',
+    'You changed CAP-001 priority to Low',
+    'You changed CAP-001 status to In Progress',
+    'You deleted bug CAP-001',
+  ]));
 });
 
 test('lets a project owner start a sprint and shows it on the dashboard', () => {
@@ -636,7 +693,7 @@ test('lets a project owner start a sprint and shows it on the dashboard', () => 
     ownerId: 'test-user',
     leadId: 'test-user',
     leadName: 'Jane Doe',
-    teamMemberIds: [],
+    teamMemberIds: ['team-member'],
     name: 'Sprint Project',
     key: 'SPR',
     type: 'software-development',
@@ -678,6 +735,15 @@ test('lets a project owner start a sprint and shows it on the dashboard', () => 
     goal: 'Close the project’s first release bugs.',
     status: 'active',
   });
+  const sprintNotifications = JSON.parse(localStorage.getItem(NOTIFICATIONS_STORAGE_KEY));
+  expect(sprintNotifications).toEqual([
+    expect.objectContaining({
+      userId: 'team-member',
+      category: 'project',
+      message: 'Jane Doe started Capstone Sprint 1',
+      read: false,
+    }),
+  ]);
   expect(screen.getByText('Capstone Sprint 1')).toBeInTheDocument();
   expect(screen.getByText('1 of 1 bugs closed')).toBeInTheDocument();
 

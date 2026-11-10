@@ -38,6 +38,7 @@ import { clearLocalSession, readLocalSession } from '../utils/authStorage';
 import { readStoredBugs } from '../utils/bugStorage';
 import {
   markAllUserNotificationsRead,
+  NOTIFICATIONS_UPDATED_EVENT,
   readUserNotifications,
 } from '../utils/notificationStorage';
 import { readStoredProjects } from '../utils/projectStorage';
@@ -79,6 +80,18 @@ const formatBugUpdated = (timestamp) => {
 
   const elapsedDays = Math.floor(elapsedHours / 24);
   return `${elapsedDays} day${elapsedDays === 1 ? '' : 's'} ago`;
+};
+
+const formatNotificationTime = (notification) => {
+  if (notification.time) return notification.time;
+  if (!notification.createdAt) return '';
+
+  return new Date(notification.createdAt).toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
 };
 
 const projectIconTypes = [
@@ -297,6 +310,15 @@ const Dashboard = () => {
   }, [notificationsOpen]);
 
   useEffect(() => {
+    const refreshNotifications = () => {
+      setNotifications(readUserNotifications(session?.id));
+    };
+
+    window.addEventListener(NOTIFICATIONS_UPDATED_EVENT, refreshNotifications);
+    return () => window.removeEventListener(NOTIFICATIONS_UPDATED_EVENT, refreshNotifications);
+  }, [session?.id]);
+
+  useEffect(() => {
     if (!notice) return undefined;
 
     const dismissTimer = window.setTimeout(() => setNotice(''), 4000);
@@ -404,7 +426,7 @@ const Dashboard = () => {
                           <strong>{notification.message}</strong>
                           {notification.detail && <p>{notification.detail}</p>}
                         </div>
-                        <time>{notification.time}</time>
+                        <time>{formatNotificationTime(notification)}</time>
                       </article>
                     )) : (
                       <div className="notification-empty-state">

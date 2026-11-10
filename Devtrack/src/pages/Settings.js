@@ -24,6 +24,8 @@ import {
   readLocalSession,
   updateLocalProfile,
 } from '../utils/authStorage';
+import { updateStoredBugUserName } from '../utils/bugStorage';
+import { updateStoredProjectUserName } from '../utils/projectStorage';
 
 const navigationItems = [
   { label: 'Dashboard', icon: Home, path: '/dashboard' },
@@ -116,6 +118,9 @@ const Settings = () => {
 
     setSession(result.session);
     setNickname(result.user.nickname);
+    const displayName = result.user.nickname || result.user.fullName;
+    updateStoredBugUserName(result.user.id, displayName);
+    updateStoredProjectUserName(result.user.id, displayName);
     setNotice({ type: 'success', message: 'Profile updated successfully.' });
   };
 

@@ -39,6 +39,7 @@ const filters = [
   { value: 'unread', label: 'Unread' },
   { value: 'project', label: 'Projects' },
   { value: 'bug', label: 'Bugs' },
+  { value: 'comment', label: 'Comments' },
   { value: 'team', label: 'Team' },
 ];
 

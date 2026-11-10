@@ -73,3 +73,24 @@ export const startProjectSprint = (projectId, sprintData, userId) => {
 
   return { project: updatedProject, sprint };
 };
+
+export const updateStoredProjectUserName = (userId, displayName) => {
+  const projects = readStoredProjects();
+  let hasChanges = false;
+
+  const updatedProjects = projects.map((project) => {
+    const isProjectLead = project.leadId === userId
+      || (!project.leadId && project.ownerId === userId);
+
+    if (!isProjectLead || project.leadName === displayName) return project;
+
+    hasChanges = true;
+    return { ...project, leadName: displayName };
+  });
+
+  if (hasChanges) {
+    localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(updatedProjects));
+  }
+
+  return updatedProjects;
+};
